@@ -1,0 +1,2 @@
+# Runtime dependencies are intentionally tiny so Cloud Agent setup is quick.
+python-dateutil==2.9.0.post0

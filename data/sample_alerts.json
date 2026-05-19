@@ -1,0 +1,29 @@
+[
+  {
+    "id": "CCA-101",
+    "title": "Dependency update flagged by advisory database",
+    "severity": "high",
+    "environment": "prod",
+    "created_at": "2026-05-16T09:00:00+00:00",
+    "updated_at": "2026-05-16T11:30:00+00:00",
+    "tags": ["dependency"]
+  },
+  {
+    "id": "CCA-102",
+    "title": "Secret scanner detected leaked token",
+    "severity": "critical",
+    "environment": "prod",
+    "created_at": "2026-05-17T08:45:00+00:00",
+    "updated_at": "2026-05-17T09:15:00+00:00",
+    "tags": ["security"]
+  },
+  {
+    "id": "CCA-103",
+    "title": "Backlog report should show stale alerts",
+    "severity": "medium",
+    "environment": "staging",
+    "created_at": "2026-05-14T14:00:00+00:00",
+    "updated_at": "2026-05-15T13:00:00+00:00",
+    "tags": ["reporting"]
+  }
+]

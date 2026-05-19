@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+commit_msg_file="$1"
+subject="$(head -n 1 "$commit_msg_file")"
+
+if [[ ! "$subject" =~ ^\[[A-Z]+-[0-9]+\]\  ]]; then
+  cat <<'MSG'
+Commit message must start with a Jira-style prefix, for example:
+  [CCA-123] Add stale-alert reporting
+
+Demo note: this hook is installed by scripts/install-hooks.sh and by the
+Copilot setup workflow so Cloud Agent commits exercise the same SDLC guardrail.
+MSG
+  exit 1
+fi
