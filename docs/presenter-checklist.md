@@ -11,6 +11,8 @@
 - Run `python -m pip install -r requirements.txt -r requirements-dev.txt`.
 - Run `ruff check .` and `pytest`.
 - Run `./scripts/install-hooks.sh` if demonstrating local hook behavior.
+- For Demo 6 (fan-out), sanity-check the native CLI command on the firm PC with
+  `gh agent-task --help` (no extension install required; the command is in preview).
 - Prepare four Jira-style IDs for live prompts, for example `CCA-101` through `CCA-104`.
 
 ## During the Session

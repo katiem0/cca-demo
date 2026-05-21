@@ -34,6 +34,6 @@ Requirements:
 BODY
 )"
 
-  printf 'mkdir -p /tmp/cca-dependency-prompts && printf %%s %q > %q && gh copilot task create --repo %q --base main --prompt-file %q\n' \
+  printf 'mkdir -p /tmp/cca-dependency-prompts && printf %%s %q > %q && gh agent-task create --repo %q --base main -F %q\n' \
     "$prompt" "$prompt_file" "$org/$repo" "$prompt_file"
 done

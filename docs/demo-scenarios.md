@@ -58,18 +58,35 @@ What to call out:
   is the deterministic backstop. If you had omitted the prefix, the agent would have come back to
   ask before committing.
 
-## Demo 2: Create a Session From Ask / Chat Mode
+## Demo 2: Create a Session From Ask Mode and Plan Mode
 
-Purpose: show the research-then-implement flow. Start in ask mode, get a plan, then promote to a
-Cloud Agent session that opens a PR.
+Purpose: contrast ask mode and plan mode side by side, then promote a plan into a Cloud Agent
+session that opens a PR.
 
-Framing for the room: "You half-know what you want, you have not opened the editor yet, and you
-want a second opinion before touching the code. Start in ask mode, then promote to Cloud Agent
-when the plan looks right."
+Framing for the room: "Not every question needs a plan. Ask mode is for understanding the code;
+plan mode is for deciding what to change before you change it. Show both, then promote the plan
+to Cloud Agent."
 
-Flow (multi-turn — the value here is the conversation, not the final prompt):
+### Part A — Ask mode (no plan, no edits)
 
-Turn 1 — open-ended research question, ask mode:
+A pure Q&A turn against the repo. The agent reads files and answers; it does not produce a
+structured plan or propose edits.
+
+```text
+In ask mode: walk me through how app/alert_triage.py decides an alert's priority today, and
+which fields on the alert actually influence the outcome. No changes, no plan — just explain it.
+```
+
+What the room should notice: the response is prose explanation grounded in the repo. No file
+list, no proposed diff, no "step 1 / step 2." Ask mode is the cheapest way to onboard onto an
+unfamiliar file.
+
+### Part B — Plan mode (same question shape, structured plan)
+
+Same kind of open-ended request, but routed through plan mode so the output is an explicit plan
+the developer can approve or steer before any code is written.
+
+Turn 1 — research-and-plan, plan mode:
 
 ```text
 My manager keeps asking for a clearer triage report. Look through this repo and give me two or
@@ -77,7 +94,7 @@ three small options for making it more useful for someone reviewing risk. Do not
 yet.
 ```
 
-Turn 2 — narrow the plan based on what Copilot returned:
+Turn 2 — narrow the plan based on what plan mode returned:
 
 ```text
 Let's go with option 1. What files would you touch, and what does the new report output look
@@ -94,10 +111,13 @@ messages.
 
 What to call out:
 
+- Ask mode vs plan mode is the key contrast: same surface, different output shape. Ask mode
+  answers; plan mode proposes ordered steps and file targets you can approve.
+- Plan mode is the cheapest place to steer — you are editing a plan, not reverting code.
 - The user-level entry point lets a developer pick any repository they have access to from a
   single starting page.
-- Ask mode → Cloud Agent is a natural promotion point; the UI prompts to start a session when the
-  request becomes agentic.
+- Plan mode → Cloud Agent is a natural promotion point; the UI prompts to start a session when
+  the request becomes agentic.
 - The plan-approval moment is the cheapest place to steer before any code exists.
 
 ## Demo 3: Review the Cloud Agent Lifecycle — Workflow Run, Logs, and PR
@@ -145,16 +165,11 @@ Setup: reuse the open PR from Demo 1 (the `alert_triage.py` test-coverage PR ope
 `[CCA-101]`). No new session is started here — every turn is a comment on that same PR, so the
 room sees the branch, diff, and PR description evolve in place.
 
-Flow (multi-turn on the Demo 1 PR — each `@copilot` comment is a separate turn):
+Flow (multi-turn on the Demo 1 PR — each `@copilot` comment is a separate turn). Pick up
+straight from the Demo 1 PR; do not waste a turn asking the agent to summarize its own diff,
+so the room is not watching latency on a low-value prompt.
 
-Turn 1 — ask the agent to summarize its own change before requesting edits:
-
-```text
-@copilot quick summary please — what did you change in app/ and tests/ on this PR, and is there
-anything a reviewer is likely to flag that you skipped?
-```
-
-Turn 2 — a precise, review-driven edit on top of the Demo 1 tests:
+Turn 1 — a precise, review-driven edit on top of the Demo 1 tests:
 
 ```text
 @copilot the reviewer wants a regression test for the highest-priority alerts (severity=critical
@@ -162,7 +177,7 @@ in prod). Add it next to the tests you already wrote, and tidy up the PR descrip
 [CCA-101].
 ```
 
-Turn 3 — if review surfaces a second small issue, keep iterating on the same PR:
+Turn 2 — if review surfaces a second small issue, keep iterating on the same PR:
 
 ```text
 @copilot one of the rationale strings in app/alert_triage.py still uses the old wording. Update
@@ -219,7 +234,7 @@ What to call out:
 - This is the single-repo precursor to Demo 6 — once one Dependabot rescue works, fan-out is
   "do the same thing across ten repos."
 
-## Demo 6: Fan Out One Prompt Across Many Repos With `gh`
+## Demo 6: Fan Out One Prompt Across Many Repos With `gh agent-task`
 
 Purpose: dispatch the same prompt across many repositories from the command line.
 
@@ -228,26 +243,39 @@ was one Dependabot PR; this is the same pattern across the whole fleet. There is
 session — the platform spawns one Cloud Agent session per repo, in parallel, each with its own
 auditable workflow run like Demo 3 and its own PR you can iterate on like Demo 4 or Demo 5."
 
-The live demo command — inline prompt, no temp files:
+`gh agent-task` is native to the GitHub CLI (preview; no extension to install). Sanity-check
+with `gh agent-task --help` on the firm PC before the session.
+
+### Step 1 — one repo, one command
+
+Lead with a single dispatch so the room sees exactly what `gh agent-task` does without any shell
+plumbing in the way:
+
+```bash
+gh agent-task create --repo ORG/payments-api --base main \
+  "Update requests to >=2.32 and urllib3 to >=2.2 in this repo's Python dependency
+manifests, run ruff and pytest, and open a PR. Use [CCA-104] in commit messages."
+```
+
+What the audience sees: one task ID / PR URL comes back immediately. Confirm with
+`gh agent-task view <id>` (or click the PR link) — same Demo 3 lifecycle, just kicked off from
+the CLI instead of the repository UI.
+
+### Step 2 — same command, N repos
+
+The reveal: `gh agent-task` takes one `--repo` per call, so fanning out across many repos is the
+same command in a shell loop. One prompt, one loop, N parallel sessions.
 
 ```bash
 for r in payments-api ledger-service risk-ui; do
-  gh copilot task create --repo ORG/$r --base main \
-    --prompt "Update requests to >=2.32 and urllib3 to >=2.2 in this repo's Python
-dependency manifests, run ruff and pytest, and open a PR. Use [CCA-104] in commit messages."
+  gh agent-task create --repo ORG/$r --base main \
+    "Update requests to >=2.32 and urllib3 to >=2.2 in this repo's Python dependency
+manifests, run ruff and pytest, and open a PR. Use [CCA-104] in commit messages."
 done
 ```
 
-What the audience sees: three `gh` invocations come back with three task IDs / PR URLs, one per
-repo. Open one of them and confirm it looks like the Demo 3 lifecycle.
-
-If `--prompt` is not accepted by the `gh copilot` version installed on the firm PC, the same
-shape works via stdin:
-
-```bash
-echo "Update requests to >=2.32 ... [CCA-104]" | \
-  gh copilot task create --repo ORG/payments-api --base main --prompt-file -
-```
+Three `gh` invocations come back with three task IDs / PR URLs, one per repo. Each is its own
+Demo 3 lifecycle and its own Demo 4 / Demo 5 iteration surface.
 
 Production-grade version of the same thing — `scripts/fanout-dependency-updates.sh` — useful when
 the prompt needs to be templated per repo or when you want a dry-run preview before dispatching:
@@ -256,20 +284,22 @@ the prompt needs to be templated per repo or when you want a dry-run preview bef
 scripts/fanout-dependency-updates.sh ORG CCA-104 payments-api ledger-service risk-ui
 ```
 
-It prints the `gh copilot task create` command it would run for each repo before executing, which
+It prints the `gh agent-task create` command it would run for each repo before executing, which
 is the safer shape for real fan-outs across ten or more targets. Show this only if the room asks
 how to operationalize the one-liner.
 
 What to call out:
 
-- One prompt string, one shell loop, N parallel sessions. Cloud Agent has no native multi-repo
-  dispatch — `gh` takes one `--repo` per call, so the fan-out is just shell.
+- Lead with the single-repo invocation. The shell loop is the reveal, not the headline — the
+  room first sees one clean command, then realizes it scales by repetition.
+- Cloud Agent has no native multi-repo dispatch — `gh agent-task` takes one `--repo` per call,
+  so fan-out is just shell.
+- `gh agent-task` is the native Cloud Agent dispatcher in `gh` (preview); `gh copilot`
+  (suggest / explain) is a separate extension and is not what creates sessions.
 - Each spawned session has its own workflow run (Demo 3) and its own PR (Demo 4); the loop only
-  kicks off the first turn in each repo.
+  kicks off the first turn in each repo. Use `gh agent-task list` / `view` to follow them.
 - This path must not create or assign GitHub Issues.
 - Start with two or three low-risk repositories, then scale the list once the prompt is proven.
-- The firm-approved `gh` command shape (and exact flag names — `--prompt` vs `--prompt-file -`)
-  must be confirmed.
 
 ## Demo 7: Brief Look at Custom Agents (Time Permitting)
 
